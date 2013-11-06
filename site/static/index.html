@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Suzu's Gym</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <!-- Additional to bootstrap -->
+    <link href="bootstrap/css/sticky-footer.css" rel="stylesheet">
+    <!-- Own -->
+    <link href="suzushii.css" rel="stylesheet">
+
+  </head>
+  <body>
+    <div id="wrap">
+      <div class="container">
+        <div class="page-header">
+          <h1 class="text-center">Suzu's Gym</br>
+            <small>Helping otaku master kanji since 2013</small></h1>
+        </div>
+
+        <div class="input-group" id="searchBar">
+          <input id="searchBarInput" type="text" class="form-control" placeholder="Paste some kanji in here" onkeyup="SearchBar.evaluateInput(this.value)">
+          <div class="input-group-btn">
+            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown"><div class="fixCaretNearDiv" id="searchBarSelection">All</div><span class="caret"></span></button>
+            <ul class="dropdown-menu pull-right">
+              <li><a onclick="SearchBar.changeSearchParameter(event)">All</a></li>
+              <li class="divider"></li>
+              <li><a onclick="SearchBar.changeSearchParameter(event)">Anime</a></li>
+              <li class="disabled"><a href="#">Quotes</a></li>
+              <li class="disabled"><a href="#">Manga</a></li>
+              <li class="disabled"><a href="#">Lyrics</a></li>
+              <li class="divider"></li>
+              <li class="disabled"><a href="#">Names</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="container" id="kanjiBoxesContainer">
+        </div>
+
+      </div>
+    </div>
+    <div id="footer">
+      <div class="container">
+        <p class="text-muted credit" "text-left">
+          <a href="#">About</a>
+        </p>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery.js"></script>
+
+    <script type="text/javascript">
+
+      KANJI_PRESENTATION_CACHE = {}
+
+      function isKanji(character) {
+        var ord = character.charCodeAt(0);
+        if ( (19968 < ord && ord < 40864) ||
+             (13312 < ord && ord < 19903) ) {
+          return true
+        }
+        return false
+      }
+
+      function redirectToKanji(kanji) {
+        $('#searchBarInput').val(kanji);
+        SearchBar.evaluateInput(kanji);
+      }
+
+      function SearchBar(args) {
+
+      }
+
+      SearchBar.evaluateInput = function(input) {
+
+        // Stop previous presentations if the input changed
+        for (var presentationId in KANJI_PRESENTATION_CACHE) {
+          KANJI_PRESENTATION_CACHE[presentationId].setStopPresenting();
+        };
+        KanjiPresentationBox.removeAllExisting();
+
+        var alreadyShown = [];
+        // Try to get the box from the cache
+        // or create a new one, omiting duplicated kanjis
+        for (var i = 0; i < input.length; i++) {
+          if (isKanji(input[i])) {
+            if (alreadyShown.indexOf(input[i]) < 0) {
+              if (!(input[i] in KANJI_PRESENTATION_CACHE)) {
+                KANJI_PRESENTATION_CACHE[input[i]] = new KanjiPresentationBox(input[i], $('#searchBarSelection')[0].textContent);;
+              }
+              KANJI_PRESENTATION_CACHE[input[i]].presentNext();
+              alreadyShown.push(input[i]);
+            }
+          }
+        };
+      };
+
+      SearchBar.changeSearchParameter = function(event) {
+
+        var newSearchArea = event.target.textContent;
+
+        // Change search area
+        $('#searchBarSelection')[0].textContent = newSearchArea;
+
+        // Stop kanjis and change area
+        for (var presentationId in KANJI_PRESENTATION_CACHE) {
+          KANJI_PRESENTATION_CACHE[presentationId].setStopPresenting();
+          KANJI_PRESENTATION_CACHE[presentationId].changeSearchArea(newSearchArea);
+        };
+
+        // Reload
+        SearchBar.evaluateInput($('#searchBarInput').val())
+
+      }
+
+      function KanjiPresentationBox(kanji, searchArea) {
+        this.kanji = kanji;
+        this.searchArea = searchArea;
+
+        this.showingOriginalName = 0;
+        this.elementKey = '_kbEK' + kanji;
+        this.markerElementKey = '_kbEK' + kanji + '_marker';
+        this.stopPresenting = false;
+        this.requestedData = {
+          media: null,
+          details: null
+        }
+      }
+
+      KanjiPresentationBox.prototype.changeSearchArea = function(newSearchArea) {
+        // Remove old media data if the search area changed
+        if (newSearchArea != this.searchArea) {
+          this.searchArea = newSearchArea;
+          this.requestedData.media = null;
+        }
+      };
+
+      KanjiPresentationBox.removeAllExisting = function() {
+        $('.kanjiBox').remove();
+      };
+
+      KanjiPresentationBox.prototype.formatScore = function(score) {
+        if (score < 1) {
+          return 'N/A';
+        } else {
+          return score.toFixed(2);
+        }
+      };
+
+      KanjiPresentationBox.prototype.formatOriginalName = function(originalText) {
+
+        // Link to other kanjis
+        var newText = '';
+        for (var i = 0; i < originalText.length; i++) {
+          if ( (originalText[i] != this.kanji) &&
+               (isKanji(originalText[i])) ) {
+            newText = newText + '<a onclick="redirectToKanji(&quot;' + originalText[i] + '&quot;)">' + originalText[i] + '</a>';
+          } else {
+            newText = newText + originalText[i];
+          }
+        };
+
+        // Finally mark myself
+        return newText.replace(this.kanji,'<strong class="selectedKanjiInTitle">' + this.kanji + '</strong>');
+      };
+
+      KanjiPresentationBox.prototype.toggleOriginalName = function() {
+        if (!(this.requestedData.media)) { return; }
+        // Cycle though original names
+        if ((this.showingOriginalName + 1) < 3) {
+          this.showingOriginalName++;
+        } else {
+          this.showingOriginalName = 0;
+        }
+        // Refresh presentation
+        this.addBox()
+      };
+
+      KanjiPresentationBox.prototype.addBox = function() {
+
+        // Details
+        var meaningString = '';
+        var headerMeaningString = '';
+        var bodyMeaningHTML = '';
+        var bodyOnreadingHTML = '';
+        var bodyKunreadingHTML = '';
+        if (this.requestedData.details) {
+          meaningString = this.requestedData.details.meaning.join(', ');
+          headerMeaningString = '- ' + meaningString;
+          bodyMeaningHTML = '<strong>Meanings: </strong>' + meaningString + '<br><br>';
+          bodyOnreadingHTML = '<strong>On readings: </strong>' + this.requestedData.details.onyomi.join(', ') + '<br><br>';
+          bodyKunreadingHTML = '<strong>Kun readings: </strong>' + this.requestedData.details.kunyomi.join(', ');
+        }
+
+        // Media
+        var mediaTable = '';
+
+        if (this.requestedData.media) {
+          // Generate table, only show it if there is data
+          var mediaTableEntries = '';
+
+          this.requestedData.media.media.sort(function(a,b){
+            return (b.score - a.score);
+          });
+
+          for (var i = 0; i < this.requestedData.media.media.length; i++) {
+
+            // Show current original name, or none if this media doesn't have it
+            var originalNameToShow = '-'
+            if (this.requestedData.media.media[i].originalName.length >= this.showingOriginalName) {
+              originalNameToShow = this.requestedData.media.media[i].originalName[this.showingOriginalName]
+              if (this.showingOriginalName === 0) {
+                originalNameToShow = this.formatOriginalName(originalNameToShow);
+              }
+            }
+
+            mediaTableEntries = mediaTableEntries + '<tr> \
+                                                      <td>' + this.requestedData.media.media[i].kind + '</td> \
+                                                      <td>' + this.requestedData.media.media[i].name+ '</td> \
+                                                      <td class="bigWordInKanji">' + originalNameToShow + '</td> \
+                                                      <td>' + this.formatScore(this.requestedData.media.media[i].score)+ '</td> \
+                                                    </tr>'
+          };
+          if (mediaTableEntries) {
+            mediaTable = '<table class="table table-hover"> \
+                          <thead> \
+                            <th>Type</th> \
+                            <th>Name</th> \
+                            <th onclick="KANJI_PRESENTATION_CACHE[&quot;'+ this.kanji +'&quot;].toggleOriginalName()">Original Name</th> \
+                            <th>Score</th> \
+                          </thead> \
+                          <tbody>'
+                          + mediaTableEntries +
+                          '</tbody> \
+                        </table>';
+          }
+        }
+
+        // Generate content
+        var contHTMLString = '<div id="' + this.elementKey + '" class="panel panel-default"> \
+                                 <div class="panel-heading"> \
+                                  <h3 class="panel-title"> \
+                                    <p>' + this.kanji + ' - ' + meaningString + '</p> \
+                                  </h3> \
+                                </div> \
+                                <div class="row"> \
+                                  <div class="panel-body"> \
+                                    <div class="col-xs-4 col-sm-3 col-md-3"> \
+                                      <p class="kanjiPresentation">' + this.kanji + '</p> \
+                                    </div> \
+                                    <div class="col-xs-8 col-sm-9 col-md-9">'
+                                      + bodyMeaningHTML
+                                      + bodyOnreadingHTML
+                                      + bodyKunreadingHTML +
+                                    '</div> \
+                                  </div> \
+                                </div> \
+                                <div class="row"> \
+                                  <div class="col-xs-12 col-sm-12 col-md-12">'
+                                   + mediaTable +
+                                  '</div> \
+                                </div> \
+                              </div>';
+
+        // If we don't exist in the DOM, create ourselfs
+        var $element = $('#'+this.markerElementKey);
+        if ($element.length == 0) {
+          $element = $('<div id="' + this.markerElementKey + '" class="kanjiBox">'
+                          + contHTMLString +
+                      '</div>');
+          $element.appendTo($('#kanjiBoxesContainer'))
+          $element.hide();
+        } else {
+          // If we exist, update content
+          $('#'+this.elementKey).remove();
+          $(contHTMLString).appendTo($element);
+        }
+
+      };
+
+      KanjiPresentationBox.prototype.show = function() {
+        $('#'+this.markerElementKey).show();
+      };
+
+      KanjiPresentationBox.prototype.setStopPresenting = function() {
+        this.stopPresenting = true;
+      };
+
+      KanjiPresentationBox.prototype.presentNext = function() {
+
+        this.stopPresenting = false;
+        dataRequested = false;
+
+        // Generate hidden stub to preserve the kanji order
+        this.addBox();
+
+        // Let's request data
+        var that = this;
+        if (this.requestedData.media === null) {
+          dataRequested = true;
+          $.getJSON('/kanjiMedia/'+this.kanji+'/'+this.searchArea, function(result){
+            that.requestedData.media = result;
+
+            if (that.stopPresenting) {
+              return;
+            }
+
+            that.addBox();
+            that.show();
+          }, function(result){
+
+          })
+        }
+
+        if (this.requestedData.details === null) {
+          dataRequested = true;
+          $.getJSON('/kanjiDetails/'+this.kanji, function(result){
+            that.requestedData.details = result;
+
+            if (that.stopPresenting) {
+              return;
+            }
+
+            that.addBox();
+            that.show();
+          }, function(result){
+
+          })
+        }
+
+        // If we already had the data, just show the stub, which was in fact
+        // filled with good data from the start
+        if (!dataRequested) {
+          this.show();
+        }
+
+      };
+
+    </script>
+
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+  </body>
+</html>

@@ -34,3 +34,10 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+#Mac
+.DS_Store
+
+#Project
+*db.db
+site/configuration.py

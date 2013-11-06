@@ -1,0 +1,31 @@
+/* Search bar */
+#searchBar {
+    margin-bottom: 40px
+}
+
+/* Hacks */
+/* I needed to change the value of the button besides the bar
+    but the carret would get out of place, touch this if something
+    similar happens again */
+.fixCaretNearDiv {
+    float: left;
+}
+
+/* Kanji boxes */
+.kanjiPresentation {
+    font-size: 100px;
+}
+
+.selectedKanjiInTitle {
+    font-weight: bold;
+    color: red;
+}
+
+.relatedKanjiInTitle {
+    text-decoration: none;
+    color: blue;
+}
+
+.bigWordInKanji {
+    word-break: break-all;
+}

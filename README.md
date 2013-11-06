@@ -1,4 +1,2 @@
 suzushii
 ========
-
-Kanji lookup site
